@@ -1,0 +1,40 @@
+# {{ ansible_managed }}
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: haproxy-{{ worker_id }}
+  namespace: kube-system
+  labels:
+    k8s-app: haproxy-{{ worker_id }}
+    scheduler.alpha.kubernetes.io/critical-pod: ""
+    kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: haproxy-{{ worker_id }}
+  template:
+    metadata:
+      labels:
+        k8s-app: haproxy-{{ worker_id }}
+    spec:
+      hostNetwork: true
+      containers:
+        - name: haproxy-{{ worker_id }}
+          image: jaskaranbir/haproxy:1.0.0
+          env:
+            - name: HAPROXY_CONFIG
+              value: "{{ kube_config_dir }}/haproxy.cfg"
+            - name: HAPROXY_ARGS
+              value: "-L haproxy-{{ worker_id }}"
+          volumeMounts:
+            - name: config-file
+              mountPath: "{{ kube_config_dir }}/haproxy.cfg"
+              readOnly: true
+      volumes:
+        - name: config-file
+          hostPath:
+            path: "{{ kube_config_dir }}/haproxy.cfg"

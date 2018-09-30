@@ -1,0 +1,4 @@
+---
+# defaults file for roles/ca
+
+kubectl_checksum: a9e7f82e516aa8a652bc485620483ea964eb940787cabf890d7eab96eaac294d

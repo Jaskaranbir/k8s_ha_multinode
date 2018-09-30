@@ -1,0 +1,6 @@
+---
+# defaults file for roles/ca
+
+etcd_image_repo  : "quay.io/coreos/etcd"
+etcd_version     : "v3.3.8"
+etcd_compose_file: "{{ compose_manifest_dir }}/etcd.yml"

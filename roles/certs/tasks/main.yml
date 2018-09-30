@@ -1,0 +1,19 @@
+---
+
+- name: Create Kubernetes pki directory
+  file:
+    path: "{{ kube_pki_dir }}"
+    state: directory
+  delegate_to: localhost
+
+- name: Setup base Certificate Authority
+  include: ca.yml
+  delegate_to: localhost
+
+- name: Generate kubernetes master certificates
+  include: master-certs.yml
+  delegate_to: localhost
+
+- name: Generate kubernetes worker certificates
+  include: worker-certs.yml
+  delegate_to: localhost

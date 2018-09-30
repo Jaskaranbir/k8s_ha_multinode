@@ -1,0 +1,66 @@
+# {{ ansible_managed }}
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-scheduler
+  namespace: kube-system
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ""
+    seccomp.security.alpha.kubernetes.io/pod: docker/default
+  labels:
+    tier: control-plane
+    component: kube-scheduler
+spec:
+  hostNetwork: true
+  containers:
+    - name: kube-scheduler
+      image: "{{ hyperkube_image }}"
+      command:
+        - /hyperkube
+        - scheduler
+        - --config={{ kube_scheduler_config }}
+      # resources:
+      #   requests:
+      #     cpu: {{ kube_scheduler_requests_cpu }}
+      #     memory: {{ kube_scheduler_requests_memory }}
+      #   limits:
+      #     cpu: {{ kube_scheduler_limits_cpu }}
+      #     memory: {{ kube_scheduler_limits_memory }}
+      livenessProbe:
+        httpGet:
+          host: 127.0.0.1
+          path: /healthz
+          port: 10251
+        initialDelaySeconds: 15
+        timeoutSeconds: 15
+      volumeMounts:
+        - name: config
+          mountPath: "{{ kube_scheduler_config }}"
+          readOnly: true
+        - name: kubeconfig
+          mountPath: "{{ kube_scheduler_kubeconfig }}"
+          readOnly: true
+        - name: logfile
+          mountPath: /var/log/kube-scheduler.log
+          readOnly: false
+        - name: ssl-certs-kubernetes
+          mountPath: "{{ kube_pki_dir }}"
+          readOnly: true
+  volumes:
+    - name: config
+      hostPath:
+        path: "{{ kube_scheduler_config }}"
+        type: File
+    - name: kubeconfig
+      hostPath:
+        path: "{{ kube_scheduler_kubeconfig }}"
+        type: File
+    - name: logfile
+      hostPath:
+        path: /var/log/kube-scheduler.log
+        type: FileOrCreate
+    - name: ssl-certs-kubernetes
+      hostPath:
+        path: "{{ kube_pki_dir }}"

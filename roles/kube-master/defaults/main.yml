@@ -1,0 +1,50 @@
+---
+# defaults file for roles/ca
+
+hyperkube_image: "{{ hyperkube_image_repo }}:{{ kubernetes_version }}"
+
+ansible_templates_dir: "{{ role_path }}/templates"
+network_plugin: "cni"
+docker_daemon_graph: "/var/lib/docker"
+kubelet_compose_file: "{{ compose_manifest_dir }}/kubelet.yml"
+
+etcd_endpoints: |
+  {%- for item in groups['etcd'] -%}
+    http://{{ hostvars[item]['ansible_env']['COREOS_PUBLIC_IPV4'] }}:2379
+    {%- if not loop.last -%}
+      ,
+    {%- endif -%}
+  {%- endfor -%}
+
+# Resource requests/limits are defined but not actually applied
+# Optimize the values as per your setup and renable them
+# (uncomment respective blocks in kubernetes components)
+# Abrupt values might cause timeouts (especially TLS handshake timeouts)
+
+kube_apiserver_requests_cpu: "200m"
+kube_apiserver_requests_memory: "512Mi"
+kube_apiserver_limits_cpu: "200m" # requests and limits should be same to get Guaranteed QoS
+kube_apiserver_limits_memory: "512Mi"
+
+kube_controller_manager_requests_cpu: "300m"
+kube_controller_manager_requests_memory: "768Mi"
+kube_controller_manager_limits_cpu: "300m" # requests and limits should be same to get Guaranteed QoS
+kube_controller_manager_limits_memory: "768Mi"
+kube_controller_manager_kubeconfig: "{{ kube_config_dir }}/kubeconfig-controller-manager.yaml"
+
+kube_kubelet_config: "{{ kube_config_dir }}/config-kubelet.yaml"
+kube_kubelet_kubeconfig: "{{ kube_config_dir }}/kubeconfig-kubelet.yaml"
+
+kube_proxy_requests_cpu: "200m"
+kube_proxy_requests_memory: "128Mi"
+kube_proxy_limits_cpu: "200m" # requests and limits should be same to get Guaranteed QoS
+kube_proxy_limits_memory: "128Mi"
+kube_proxy_config: "{{ kube_config_dir }}/config-proxy.yaml"
+kube_proxy_kubeconfig: "{{ kube_config_dir }}/kubeconfig-proxy.yaml"
+
+kube_scheduler_requests_cpu: "100m"
+kube_scheduler_requests_memory: "256Mi"
+kube_scheduler_limits_cpu: "100m" # requests and limits should be same to get Guaranteed QoS
+kube_scheduler_limits_memory: "256Mi"
+kube_scheduler_config: "{{ kube_config_dir }}/config-scheduler.yaml"
+kube_scheduler_kubeconfig: "{{ kube_config_dir }}/kubeconfig-scheduler.yaml"

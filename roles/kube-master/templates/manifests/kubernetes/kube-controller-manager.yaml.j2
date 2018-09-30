@@ -1,0 +1,70 @@
+# {{ ansible_managed }}
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-controller-manager
+  namespace: kube-system
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ""
+    seccomp.security.alpha.kubernetes.io/pod: docker/default
+  labels:
+    tier: control-plane
+    component: kube-controller-manager
+spec:
+  hostNetwork: true
+  containers:
+    - name: kube-controller-manager
+      image: "{{ hyperkube_image }}"
+      command:
+        - /hyperkube
+        - controller-manager
+        - --cluster-signing-cert-file={{ kube_pki_dir }}/apiserver.pem
+        - --cluster-signing-key-file={{ kube_pki_dir }}/apiserver-key.pem
+        - --kubeconfig={{ kube_controller_manager_kubeconfig }}
+        - --leader-elect=true
+        - --root-ca-file={{ kube_pki_dir }}/ca.pem
+        - --service-account-private-key-file={{ kube_pki_dir }}/apiserver-key.pem
+      # resources:
+      #   requests:
+      #     cpu: {{ kube_controller_manager_requests_cpu }}
+      #     memory: {{ kube_controller_manager_requests_memory }}
+      #   limits:
+      #     cpu: {{ kube_controller_manager_limits_cpu }}
+      #     memory: {{ kube_controller_manager_limits_memory }}
+      livenessProbe:
+        httpGet:
+          host: 127.0.0.1
+          path: /healthz
+          port: 10252
+        initialDelaySeconds: 15
+        timeoutSeconds: 1
+      volumeMounts:
+        - name: ssl-certs-kubernetes
+          mountPath: "{{ kube_pki_dir }}"
+          readOnly: true
+        - name: ssl-certs-host
+          mountPath: /etc/ssl/certs
+          readOnly: true
+        - name: logfile
+          mountPath: /var/log/kube-controller-manager.log
+          readOnly: false
+        - name: kubeconfig
+          mountPath: "{{ kube_controller_manager_kubeconfig }}"
+          readOnly: true
+  volumes:
+    - name: ssl-certs-kubernetes
+      hostPath:
+        path: "{{ kube_pki_dir }}"
+    - name: ssl-certs-host
+      hostPath:
+        path: /usr/share/ca-certificates
+    - name: logfile
+      hostPath:
+        path: /var/log/kube-controller-manager.log
+        type: FileOrCreate
+    - name: kubeconfig
+      hostPath:
+        path: "{{ kube_controller_manager_kubeconfig }}"
+        type: File

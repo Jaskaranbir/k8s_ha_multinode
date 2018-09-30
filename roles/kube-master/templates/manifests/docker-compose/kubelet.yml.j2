@@ -1,0 +1,41 @@
+# {{ ansible_managed }}
+---
+
+version: "3.6"
+
+services:
+  kubelet:
+    container_name: kubelet
+    image: "{{ hyperkube_image }}"
+    network_mode: host
+    pid: host
+    privileged: true
+    restart: on-failure:5
+    command: >
+      ./hyperkube kubelet
+        --cni-conf-dir=/etc/cni/net.d
+        --config={{ kube_kubelet_config }}
+        --container-runtime=docker
+        --hostname-override={{ ansible_env.COREOS_PUBLIC_IPV4 }}
+        --kubeconfig={{ kube_kubelet_kubeconfig }}
+        --network-plugin={{ network_plugin }}
+        --node-labels=master,node-role.kubernetes.io/master=""
+        --register-with-taints=node-role.kubernetes.io/master=true:NoSchedule
+    volumes:
+      # RW volumes
+      - "{{ docker_daemon_graph }}:{{ docker_daemon_graph }}:rw"
+      - /dev:/dev:rw
+      - /etc/cni:/etc/cni:rw
+      - /etc/resolv.conf:/etc/resolv.conf:rw
+      - /usr/share/ca-certificates:/usr/share/ca-certificates:rw
+      - /var/log:/var/log:rw
+      - /var/run:/var/run:rw
+      # RO volumes
+      - "{{ base_kube_dir }}:{{ base_kube_dir }}:ro"
+      - /etc/os-release:/etc/os-release:ro
+      - /etc/ssl:/etc/ssl:ro
+      - /opt/cni:/opt/cni:ro
+      - /sys:/sys:ro
+      # Shared volumes
+      - /var/lib/kubelet:/var/lib/kubelet:shared
+      - /var/lib/cni:/var/lib/cni:shared

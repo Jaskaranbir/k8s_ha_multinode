@@ -1,0 +1,6 @@
+---
+
+- name: Copy certs to {{ kube_pki_dir }}
+  copy:
+    src: "{{ ca_base_resources_dir }}/"
+    dest: "{{ kube_pki_dir }}"

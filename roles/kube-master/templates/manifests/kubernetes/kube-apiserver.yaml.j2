@@ -1,0 +1,90 @@
+# {{ ansible_managed }}
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ""
+    seccomp.security.alpha.kubernetes.io/pod: docker/default
+  labels:
+    tier: control-plane
+    component: kube-apiserver
+spec:
+  hostNetwork: true
+  containers:
+    - name: kube-apiserver
+      image: "{{ hyperkube_image }}"
+      command:
+        - /hyperkube
+        - apiserver
+        - --advertise-address={{ ansible_env.COREOS_PUBLIC_IPV4 }}
+        - --allow-privileged=true
+        - --apiserver-count={{ groups['kubernetes-masters'] | length }}
+        - --authorization-mode=RBAC
+        - --bind-address={{ ansible_env.COREOS_PUBLIC_IPV4 }}
+        - --client-ca-file={{ kube_pki_dir }}/ca.pem
+        - --enable-admission-plugins=DefaultStorageClass,LimitRanger,NamespaceLifecycle,NodeRestriction,ResourceQuota,ServiceAccount
+        - --etcd-servers={{ etcd_endpoints }}
+        - --kubelet-client-certificate={{ kube_pki_dir }}/apiserver.pem
+        - --kubelet-client-key={{ kube_pki_dir }}/apiserver-key.pem
+        - --runtime-config=extensions/v1beta1=true,extensions/v1beta1/networkpolicies=true
+        - --secure-port={{ apiserver_port }}
+        - --service-account-key-file={{ kube_pki_dir }}/apiserver-key.pem
+        - --service-cluster-ip-range={{ service_ip_range }}
+        - --tls-cert-file={{ kube_pki_dir }}/apiserver.pem
+        - --tls-private-key-file={{ kube_pki_dir }}/apiserver-key.pem
+      # Disable hostNetwork first before using hostPort
+      # ports:
+      #   - containerPort: {{ apiserver_port }}
+      #     hostPort: {{ apiserver_port }}
+      #     name: https
+      #   - containerPort: 8080
+      #     hostPort: 8080
+      #     name: local
+      # resources:
+      #   requests:
+      #     cpu: {{ kube_apiserver_requests_cpu }}
+      #     memory: {{ kube_apiserver_requests_memory }}
+      #   limits:
+      #     cpu: {{ kube_apiserver_limits_cpu }}
+      #     memory: {{ kube_apiserver_limits_memory }}
+      livenessProbe:
+        httpGet:
+          scheme: HTTP
+          host: 127.0.0.1
+          port: 8080
+          path: /healthz
+        # ApiServer can take its time starting up
+        initialDelaySeconds: 90
+        timeoutSeconds: 15
+      volumeMounts:
+        - name: ssl-certs-kubernetes
+          mountPath: "{{ kube_pki_dir }}"
+          readOnly: true
+        - name: ssl-certs-host
+          mountPath: /etc/ssl/certs
+          readOnly: true
+        - name: logfile
+          mountPath: /var/log/kube-apiserver.log
+          readOnly: false
+        - name: auditlogfile
+          mountPath: /var/log/kube-apiserver-audit.log
+          readOnly: false
+  volumes:
+    - name: ssl-certs-kubernetes
+      hostPath:
+        path: "{{ kube_pki_dir }}"
+    - name: ssl-certs-host
+      hostPath:
+        path: /usr/share/ca-certificates
+    - name: logfile
+      hostPath:
+        path: /var/log/kube-apiserver.log
+        type: FileOrCreate
+    - name: auditlogfile
+      hostPath:
+        path: /var/log/kube-apiserver-audit.log
+        type: FileOrCreate

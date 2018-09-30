@@ -1,0 +1,71 @@
+---
+
+- name: Recursively copy templates
+  include: "{{ playbook_dir }}/macros/recursive_template_copy.yml"
+  with_items:
+    # Dashboard
+    - name: Add Kubernetes dashboard
+      src : "{{ ansible_templates_dir }}/dashboard"
+      dest: "{{ kube_addons_dir }}"
+    # CoreDNS
+    - name: Add CoreDNS
+      src : "{{ ansible_templates_dir }}/core-dns"
+      dest: "{{ kube_addons_dir }}"
+
+- name: Copy HAProxy addon-manifest
+  template:
+    src: "{{ ansible_templates_dir }}/haproxy/haproxy.yml.j2"
+    dest: "{{ kube_addons_dir }}/haproxy.yml"
+  vars:
+    worker_id: "{{ item  | replace('kube-workers-', '') }}"
+  with_items:  "{{ groups['kubernetes-workers'] }}"
+
+- name: "Create Kubernetes config-files directory"
+  file:
+    path: "{{ kube_config_dir }}"
+    state: directory
+
+- name: Copy HAProxy config-file
+  template:
+    src: "{{ ansible_templates_dir }}/configs/haproxy.cfg.j2"
+    dest: "{{ kube_config_dir }}/haproxy.cfg"
+
+- name: Apply Kubernetes addons
+  command: 'kubectl apply -f "{{ item.src }}"'
+  with_filetree: "{{ kube_addons_dir }}"
+  when: item.state == "file"
+  become: false
+
+- name: Wait for HAProxy to start
+  wait_for:
+    host: "{{ ansible_env.COREOS_PUBLIC_IPV4 }}"
+    port: "{{ haproxy_port }}"
+    delay: "5"
+    connect_timeout: "2"
+    timeout: "300"
+
+- name: Get system user-name
+  command: whoami
+  register: user_name
+  become: false
+
+- name: Get system user-home
+  shell: "getent passwd {{ user_name.stdout }} | cut -d: -f6"
+  register: user_home
+
+- name: Switch kubeconfigs to use reverse-proxy server
+  command: >
+    kubectl config --kubeconfig={{ item.config }} set-cluster {{ item.cluster }}
+      --server=https://{{ ansible_env.COREOS_PUBLIC_IPV4 }}:{{ haproxy_port }}
+  with_items:
+    - config: "{{ kube_config_dir }}/kubeconfig-kubelet.yaml"
+      cluster: local
+    - config: "{{ kube_config_dir }}/kubeconfig-proxy.yaml"
+      cluster: local
+    - config: "{{ user_home.stdout }}/.kube/config"
+      cluster: default-cluster
+
+- name: Reload Kubelet to use new reverse-proxy config
+  systemd:
+    name: kubelet
+    state: restarted

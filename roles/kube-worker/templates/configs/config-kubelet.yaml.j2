@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+---
+
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+address: {{ ansible_env.COREOS_PUBLIC_IPV4 }}
+staticPodPath: {{ kube_manifest_dir }}
+clusterDNS:
+  - {{ dns_service_ip }}
+clusterDomain: "{{ dns_domain }}"
+authentication:
+  anonymous:
+    enabled: true
+  webhook:
+    enabled: false
+  x509:
+    clientCAFile: {{ kube_pki_dir }}/ca.pem
+authorization:
+  mode: AlwaysAllow
+tlsCertFile: "{{ kube_pki_dir }}/worker.pem"
+tlsPrivateKeyFile: "{{ kube_pki_dir }}/worker-key.pem"

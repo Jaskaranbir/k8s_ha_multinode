@@ -1,0 +1,21 @@
+---
+# tasks file for roles
+
+- name: Create kubectl binary directory
+  file:
+    path: "{{ binary_copy_path }}"
+    state: directory
+
+# Because Ansible get_url fails at SSL for some reason. This doesn't.
+- name: Download kubectl
+  command: |
+    /bin/curl --output {{ binary_copy_path }}/kubectl https://storage.googleapis.com/kubernetes-release/release/{{ kubernetes_version }}/bin/linux/amd64/kubectl
+  args:
+    warn: false
+
+- name: Set kubectl binary permissions
+  file:
+    path: "{{ binary_copy_path }}/kubectl"
+    owner: root
+    group: root
+    mode: 0755

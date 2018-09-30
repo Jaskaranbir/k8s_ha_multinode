@@ -1,0 +1,8 @@
+---
+# tasks file for roles
+
+- name: Install or update kubectl
+  include: install-kubectl.yml
+
+- name: Configure kubectl
+  include: config-kubectl.yml

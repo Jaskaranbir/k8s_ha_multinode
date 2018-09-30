@@ -1,0 +1,41 @@
+# tasks file for roles
+---
+
+- name: Recursively copy templates
+  include: "{{ playbook_dir }}/macros/recursive_template_copy.yml"
+  with_items:
+    # Configs
+    - name: Add Kubernetes configs
+      src : "{{ ansible_templates_dir }}/configs"
+      dest: "{{ kube_config_dir }}"
+    # Addons
+    - name: Copy Kubernetes addons
+      src : "{{ ansible_templates_dir }}/addons"
+      dest: "{{ kube_addons_dir }}"
+
+- name: Non-recursively copy templates
+  include: "{{ playbook_dir }}/macros/template_copy.yml"
+  with_items:
+    # Docker-Compose manifests
+    - name: Add Docker-Compose manifests
+      src : "{{ ansible_templates_dir }}/manifests/docker-compose"
+      dest: "{{ compose_manifest_dir }}"
+    # Kubernetes Manifests
+    - name: Add Kubernetes manifests
+      src : "{{ ansible_templates_dir }}/manifests/kubernetes"
+      dest: "{{ kube_manifest_dir }}"
+    # Systemd Services
+    - name: Add component service-files
+      src : "{{ ansible_templates_dir }}/services"
+      dest: "/etc/systemd/system"
+
+- name: Start Kubelet
+  systemd:
+    name: kubelet
+    state: started
+    enabled: true
+    daemon_reload: yes
+
+- name: Wait 1-minute to allow kubelet to sync with master
+  wait_for:
+    timeout: 60

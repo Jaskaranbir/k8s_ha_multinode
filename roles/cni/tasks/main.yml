@@ -1,0 +1,38 @@
+---
+
+- name: Enable IP forwarding
+  command: sysctl net.ipv4.ip_forward=1
+
+- name: Set /proc/sys/net/bridge/bridge-nf-call-iptables to 1
+  command: sysctl net.bridge.bridge-nf-call-iptables=1
+
+- name: Create directory for CNI binaries
+  file:
+    path: "{{ cni_bin_dir }}"
+    state: directory
+
+- name: "Add CNI plugins to {{ cni_bin_dir }}"
+  shell: "curl -fsSL https://github.com/containernetworking/plugins/releases/download/v{{ cni_plugins_version }}/cni-plugins-amd64-v{{ cni_plugins_version }}.tgz | tar xvz -C {{ cni_bin_dir }}"
+  args:
+    executable: /bin/bash
+    warn: false
+
+- name: Create CNI-config directory
+  file:
+    path: /etc/cni/net.d
+    state: directory
+
+# - name: Add weavenet-conflist template
+#   template:
+#     src: 00-weave.conflist.j2
+#     dest: /etc/cni/net.d/00-weave.conflist
+
+- name: Wait for API-Server to be ready
+  wait_for:
+    timeout: 60
+
+- name: Setup Weave Net
+  become: false
+  shell: "{{ binary_copy_path }}/kubectl apply -f https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d \"\n\")"
+  args:
+    executable: /bin/bash

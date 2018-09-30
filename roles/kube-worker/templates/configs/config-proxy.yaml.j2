@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+---
+
+kind: KubeProxyConfiguration
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+clusterCIDR: {{ kube_pod_network }}
+hostnameOverride: {{ ansible_hostname }}
+bindAddress: {{ ansible_env.COREOS_PUBLIC_IPV4 }}
+mode: iptables
+healthzBindAddress: 127.0.0.1
+clientConnection:
+  kubeconfig: "{{ kube_proxy_kubeconfig }}"

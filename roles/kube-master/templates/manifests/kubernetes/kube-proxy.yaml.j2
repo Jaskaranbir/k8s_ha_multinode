@@ -1,0 +1,76 @@
+# {{ ansible_managed }}
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+  # This annotation ensures that kube-proxy does not get evicted if the node
+  # supports critical pod annotation based priority scheme.
+  # Note that kube-proxy runs as a static pod so this annotation does NOT have
+  # any effect on rescheduler (default scheduler and rescheduler are not
+  # involved in scheduling kube-proxy).
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ""
+  labels:
+    tier: node
+    component: kube-proxy
+spec:
+  priorityClassName: system-node-critical
+  hostNetwork: true
+  tolerations:
+    - operator: "Exists"
+      effect: "NoExecute"
+    - operator: "Exists"
+      effect: "NoSchedule"
+  containers:
+    - name: kube-proxy
+      image: "{{ hyperkube_image }}"
+      command:
+        - /hyperkube
+        - proxy
+        - --config={{ kube_proxy_config }}
+      securityContext:
+        privileged: true
+      # resources:
+      #   requests:
+      #     cpu: {{ kube_proxy_requests_cpu }}
+      #     memory: {{ kube_proxy_requests_memory }}
+      #   limits:
+      #     cpu: {{ kube_proxy_limits_cpu }}
+      #     memory: {{ kube_proxy_limits_memory }}
+      volumeMounts:
+        - name: config
+          mountPath: "{{ kube_proxy_config }}"
+          readOnly: true
+        - name: kubeconfig
+          mountPath: "{{ kube_proxy_kubeconfig }}"
+          readOnly: true
+        - name: coreos-modules
+          mountPath: /lib/modules
+          readOnly: true
+        - name: ssl-certs-kubernetes
+          mountPath: "{{ kube_pki_dir }}"
+          readOnly: true
+        - name: varlog
+          mountPath: /var/log
+          readOnly: false
+  volumes:
+    - name: config
+      hostPath:
+        path: "{{ kube_proxy_config }}"
+        type: File
+    - name: kubeconfig
+      hostPath:
+        path: "{{ kube_proxy_kubeconfig }}"
+        type: File
+    - name: coreos-modules
+      hostPath:
+        path: /lib/modules
+    - name: varlog
+      hostPath:
+        path: /var/log
+    - name: ssl-certs-kubernetes
+      hostPath:
+        path: "{{ kube_pki_dir }}"

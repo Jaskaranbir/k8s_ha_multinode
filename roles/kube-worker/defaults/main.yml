@@ -1,0 +1,33 @@
+---
+# defaults file for roles/ca
+
+hyperkube_image: "{{ hyperkube_image_repo }}:{{ kubernetes_version }}"
+
+ansible_templates_dir: "{{ role_path }}/templates"
+network_plugin: "cni"
+docker_daemon_graph: "/var/lib/docker"
+kubelet_compose_file: "{{ compose_manifest_dir }}/kubelet.yml"
+
+# Resource requests/limits are defined but not actually applied
+# Optimize the values as per your setup and renable them
+# (uncomment respective blocks in kubernetes components)
+# Abrupt values might cause timeouts (especially TLS handshake timeouts)
+
+kube_heapster_base_metrics_cpu: "100m"
+kube_heapster_requests_cpu: "50m"
+kube_heapster_requests_memory: "90Mi"
+kube_heapster_limits_cpu: "50m"
+kube_heapster_limits_memory: "90Mi"
+kube_heapster_base_memory: "140Mi"
+kube_heapster_cpu_per_node: "0.5m"
+kube_heapster_memory_per_node: "4"
+
+kube_kubelet_config: "{{ kube_config_dir }}/config-kubelet.yaml"
+kube_kubelet_kubeconfig: "{{ kube_config_dir }}/kubeconfig-kubelet.yaml"
+
+kube_proxy_requests_cpu: "200m"
+kube_proxy_requests_memory: "128Mi"
+kube_proxy_limits_cpu: "200m" # requests and limits should be same to get Guaranteed QoS
+kube_proxy_limits_memory: "128Mi"
+kube_proxy_config: "{{ kube_config_dir }}/config-proxy.yaml"
+kube_proxy_kubeconfig: "{{ kube_config_dir }}/kubeconfig-proxy.yaml"

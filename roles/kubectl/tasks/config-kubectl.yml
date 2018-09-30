@@ -1,0 +1,66 @@
+---
+# tasks file for roles
+
+- name: Create Kubernetes ssl directory
+  file:
+    path: "{{ kube_pki_dir }}"
+    state: directory
+
+- name: Add admin certificates to kubernetes ssl directory
+  copy:
+    src: "{{ kube_pki_dir }}/{{ item }}"
+    dest: "{{ kube_pki_dir }}/{{ item }}"
+    mode: 0644
+    owner: root
+    group: root
+  with_items:
+    - ca.pem
+    - admin.pem
+    - admin-key.pem
+
+- name: Set default cluster
+  command: >
+    kubectl config set-cluster default-cluster
+      --server={{ init_apiserver_address }}
+      --certificate-authority=ca.pem
+  args:
+    chdir: "{{ kube_pki_dir }}"
+
+- name: Set credentials
+  command: >
+    kubectl config set-credentials default-admin
+      --certificate-authority=ca.pem
+      --client-key=admin-key.pem
+      --client-certificate=admin.pem
+  args:
+    chdir: "{{ kube_pki_dir }}"
+
+- name: Set context
+  command: >
+    kubectl config set-context default-system
+      --cluster=default-cluster
+      --user=default-admin
+  args:
+    chdir: "{{ kube_pki_dir }}"
+
+- name: Use context
+  command: kubectl config use-context default-system
+  args:
+    chdir: "{{ kube_pki_dir }}"
+
+- name: Get system user-name
+  command: whoami
+  register: user_name
+  become: false
+
+- name: Get system user-home
+  shell: "getent passwd {{ user_name.stdout }} | cut -d: -f6"
+  register: user_home
+
+- name: Create local kube-config directory
+  file:
+    path: "{{ user_home.stdout }}/.kube"
+    state: directory
+
+- name: Copy kubectl config to user-home
+  shell: "kubectl config view > {{ user_home.stdout }}/.kube/config"

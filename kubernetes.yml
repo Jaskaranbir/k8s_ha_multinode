@@ -1,0 +1,63 @@
+---
+# This Playbook deploys the Kubernetes cluster
+
+- name: Setup TLS cetificates
+  hosts: all
+  become: true
+  run_once: true
+  roles:
+    - certs
+  tags:
+    - certs
+
+- name: Distribute TLS cetificates
+  hosts: all
+  become: true
+  roles:
+    - distribute-certs
+  tags:
+    - certs
+    - distribute-certs
+
+- name: Configure etcd cluster
+  hosts: etcd
+  become: true
+  roles:
+    - etcd
+  tags:
+    - etcd
+
+- name: Configure kubectl
+  hosts: all
+  become: true
+  roles:
+    - role: kubectl
+  tags:
+    - kubectl
+
+- name: Configure Kubernetes master(s)
+  hosts: kubernetes-masters
+  become: true
+  roles:
+    - role: kube-master
+      tags:
+        - kube-master
+    - role: cni
+      tags:
+        - cni
+
+# - hosts: all
+
+- name: Configure Kubernetes worker(s)
+  hosts: kubernetes-workers
+  become: true
+  roles:
+    - role: kube-worker
+      tags:
+        - kube-worker
+    - role: cni
+      tags:
+        - cni
+    - role: kube-addons
+      tags:
+        - kube-addons

@@ -1,0 +1,43 @@
+---
+# tasks file for roles
+
+- name: Create ca directory
+  file:
+    path: "{{ ca_base_resources_dir }}"
+    state: directory
+
+- name: Add openssl configuration for Kuberentes worker
+  template:
+    src: worker-openssl.cnf.j2
+    dest: "{{ ca_base_resources_dir }}/worker-openssl.cnf"
+
+- name: Create worker key
+  command: openssl genrsa
+            -out worker-key.pem 2048
+  args:
+    chdir: "{{ ca_base_resources_dir }}"
+    # creates: worker-key.pem
+
+- name: Create worker csr
+  command: openssl req -new
+            -key    worker-key.pem
+            -out    worker.csr
+            -subj   "/CN=kube-worker/O=system:masters"
+            -config worker-openssl.cnf
+  args:
+    chdir: "{{ ca_base_resources_dir }}"
+    # creates: worker.csr
+
+- name: Create worker certificate
+  command: openssl x509 -req
+            -in         worker.csr
+            -CA         ca.pem
+            -CAkey      ca-key.pem
+            -CAcreateserial
+            -out        worker.pem
+            -days       365
+            -extensions v3_req
+            -extfile    worker-openssl.cnf
+  args:
+    chdir: "{{ ca_base_resources_dir }}"
+    # creates: worker.pem

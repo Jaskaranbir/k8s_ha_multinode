@@ -1,0 +1,22 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=ETCD Server
+Documentation=https://coreos.com/etcd/docs/latest
+After=docker.service
+Wants=docker.socket
+StartLimitIntervalSec=10
+StartLimitBurst=3
+
+[Service]
+ExecStart={{ docker_compose_path }} -f {{ etcd_compose_file }} up -d
+
+{% for item in groups['etcd'] %}
+ExecStartPre=-{{ docker_path }}/docker rm -f etcd{{ loop.index }}
+{% endfor %}
+
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

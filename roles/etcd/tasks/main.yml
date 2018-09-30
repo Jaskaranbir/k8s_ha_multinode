@@ -1,0 +1,32 @@
+---
+# tasks file for roles
+
+- name: Create compose-manifest directory
+  file:
+    path: "{{ compose_manifest_dir }}"
+    state: directory
+
+- name: Copy etcd compose-file to compose-manifest directory
+  template:
+    src: etcd.yml.j2
+    dest: "{{ etcd_compose_file }}"
+
+- name: Copy etcd service-file to systemd
+  template:
+    src: etcd.service.j2
+    dest: "{{ systemd_service_dir }}/etcd.service"
+
+- name: Start etcd service
+  systemd:
+    name: etcd
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Wait for etcd port to be open
+  wait_for:
+    host: 127.0.0.1
+    port: 2379
+    delay: 5
+    connect_timeout: 2
+    timeout: 300
