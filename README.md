@@ -38,7 +38,10 @@ Kube-Worker: 2
 
 * Just run `vagarnt up`, and it will automatically run install/run Ansible and setup a local Kubernetes cluster.
 
-TODO: Improve cluster-security.
+#### TODO:
+
+* HAProxy hosts are not dynamic, need to manully add to config and restart HAProxy.
+* Improve Security.
 Suggestions welcomed.
 
 ### Ansible Notes
